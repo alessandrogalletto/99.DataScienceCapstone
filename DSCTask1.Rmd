@@ -1,0 +1,143 @@
+---
+title: "Data Science Capstone. Milestone Report"
+author: "Alessandro Galletto"
+date: "7/1/2020"
+printdate: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+    number_sections: TRUE
+    toc: TRUE
+    toc_depth: 2
+    df_print: paged
+    includes:
+      in_header: DSC.Header.html
+      after_body: DSC.Footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+require(readr) || install.packages("readr")
+require(stringr) || install.packages("stringr")
+require(dplyr) || install.packages("dplyr")
+require(ggplot2) || install.packages("ggplot2")
+require(ggcorrplot) || install.packages("ggcorrplot")
+require(reshape) || install.packages("reshape")
+require(reshape2) || install.packages("reshape2")
+require(data.table) || install.packages("data.table")
+require(R.utils) || install.packages("R.utils")
+require(ggthemes) || install.packages("ggthemes")
+require(rlist) || install.packages("rlist")
+require(caret) || install.packages("caret")
+require(rpart) || install.packages("rpart")
+require(rpart.plot) || install.packages("rpart.plot")
+require(rattle) || install.packages("rattle")
+require(randomForest) || install.packages("randomForest")
+require(knitr) || install.packages("knitr")
+require(plotly) || install.packages("plotly")
+require(factoextra) || install.packages("factoextra")
+require(GGally) || install.packages("GGally")
+require(tm) || install.packages("tm")
+require(SnowballC) || install.packages("SnowballC")
+require(RWeka) || install.packages("RWeka")
+
+library(readr)
+library(stringr)
+library(dplyr)
+library(ggplot2)
+library(ggcorrplot)
+library(reshape)
+library(reshape2)
+library(data.table)
+library(R.utils)
+library(ggthemes)
+library(rlist)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+library(knitr)
+library(DT)
+library(plotly)
+library(factoextra)
+library(GGally)
+library(tm)
+library(SnowballC)
+library(RWeka)
+```
+
+# TASK 0: INTRODUCTION
+This report is part of the John's Hopkins Data Science Course Spacialization. The assignment requires to analyse several files with common txets in order to model the usual pattern of texts and develop an algorithm in order to suggest the following word to the user as Swiftjey's software performs.
+
+# TASK 1: GETTING AND CLEANING THE DATA
+Source of the data: [Content archived from heliohost.org on September 30, 2016 and retrieved via Wayback Machine on April 24, 2017.](
+https://web-beta.archive.org/web/20160930083655/http://www.corpora.heliohost.org/aboutcorpus.html)
+
+The data is collected by a web archiver that allows us to have the text published. This zip contains several languages: 1) German, 2) English - United States, 3) Finnish and 4) Russian but I'm going to process only the English language. Anyway, all that is deveolpped in this assigment can be applied to other languages.
+Reading of the english files:
+```{r loadingfiles, cache = TRUE}
+# download and unzip of the files
+fileName <- "Coursera-SwiftKey.zip"
+if (file.exists(fileName)) file.remove(fileName)
+unlink("Final", recursive = TRUE)
+url.file <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+download.file(url.file, destfile="Coursera-SwiftKey.zip")
+unzip(fileName)
+# Using read_lines because readr is the most efficient r package in reading files
+txtdatatmp <- tbl_df(read_lines(file="./final/en_US/en_US.blogs.txt"))
+txtdatatmp2 <- tbl_df(read_lines(file="./final/en_US/en_US.news.txt"))
+txtdatatmp3 <- tbl_df(read_lines(file="./final/en_US/en_US.twitter.txt"))
+names(txtdatatmp) <- c("phrases")
+names(txtdatatmp2) <- c("phrases")
+names(txtdatatmp3) <- c("phrases")
+# Union of the three files using the most efficient version of rbind
+txtdata.all <- bind_rows(txtdatatmp, txtdatatmp2, txtdatatmp3)
+names(txtdata.all) <- c("phrases")
+# I'm selecting a part of the phrases available
+# txtdata <- txtdata.all
+txtdata <- sample_n(txtdata.all,100000)
+names(txtdata) <- c("phrases")
+attach(txtdata)
+
+# Summary of the data set
+blogs.size <- file.info("final/en_US/en_US.blogs.txt")$size / 1024 ^ 2
+news.size <- file.info("final/en_US/en_US.news.txt")$size / 1024 ^ 2
+twitter.size <- file.info("final/en_US/en_US.twitter.txt")$size / 1024 ^ 2
+resume <- data.table(
+  source=c("blogs", "news", "twitter"),
+  size.MB = as.character(c(round(blogs.size,digits=1), round(news.size,digits=1), round(twitter.size,digits=1))),
+  num.lines = c(length(txtdatatmp$phrases), length(txtdatatmp2$phrases), length(txtdatatmp3$phrases)))
+#  num.words = c(sum(stri_count_words(txtdatatmp)), sum(stri_count_words(txtdatatmp)), sum(stri_count_words(txtdatatmp))))
+kable(resume)
+
+# Freeing space
+#rm(txtdatatmp, txtdatatmp2, txtdatatmp3)
+```
+
+I'm going to use the tm package.
+```{r cleaning and stemming the data, cache = TRUE}
+# Cleaning the data from stopwords, stemming, removing whitespaces 
+corpora <- VCorpus(VectorSource(paste(unlist(txtdata), collapse =" ")))
+corpora <- tm_map(corpora, removeNumbers)
+corpora <- tm_map(corpora, removePunctuation)
+corpora <- tm_map(corpora, content_transformer(tolower))
+corpora <- tm_map(corpora, removeWords, stopwords("en"))
+corpora <- tm_map(corpora, stripWhitespace)
+corpora <- tm_map(corpora, stemDocument, language="en")
+
+dtm <- DocumentTermMatrix(corpora) 
+dtm.data <- as.matrix(dtm)
+```
+
+
+
+# PROFANITY FILTERING 
+*Removing profanity and other words you do not want to predict.*
+
+***
+# Appendix. Environment used
+```{r sessioninfo} 
+sessionInfo()
+```
