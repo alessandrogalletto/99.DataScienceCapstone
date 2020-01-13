@@ -16,6 +16,10 @@ output:
       after_body: DSC.Footer.html
 ---
 
+# TASK 1: GETTING AND CLEANING THE DATA
+*INTRODUCTION*
+This report is part of the John's Hopkins Data Science Course Spacialization. The assignment requires to analyse several files with common txets in order to model the usual pattern of texts and develop an algorithm in order to suggest the following word to the user as Swiftjey's software performs.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 require(readr) || install.packages("readr")
@@ -68,14 +72,11 @@ library(SnowballC)
 library(RWeka)
 ```
 
-# TASK 0: INTRODUCTION
-This report is part of the John's Hopkins Data Science Course Spacialization. The assignment requires to analyse several files with common txets in order to model the usual pattern of texts and develop an algorithm in order to suggest the following word to the user as Swiftjey's software performs.
-
-# TASK 1: GETTING AND CLEANING THE DATA
 Source of the data: [Content archived from heliohost.org on September 30, 2016 and retrieved via Wayback Machine on April 24, 2017.](
 https://web-beta.archive.org/web/20160930083655/http://www.corpora.heliohost.org/aboutcorpus.html)
 
 The data is collected by a web archiver that allows us to have the text published. This zip contains several languages: 1) German, 2) English - United States, 3) Finnish and 4) Russian but I'm going to process only the English language. Anyway, all that is deveolpped in this assigment can be applied to other languages.
+
 Reading of the english files:
 ```{r loadingfiles, cache = TRUE}
 # download and unzip of the files
@@ -95,13 +96,17 @@ names(txtdatatmp3) <- c("phrases")
 # Union of the three files using the most efficient version of rbind
 txtdata.all <- bind_rows(txtdatatmp, txtdatatmp2, txtdatatmp3)
 names(txtdata.all) <- c("phrases")
-# I'm selecting a part of the phrases available
+
+# I'm selecting a sample of the phrases available
 # txtdata <- txtdata.all
 txtdata <- sample_n(txtdata.all,100000)
 names(txtdata) <- c("phrases")
 attach(txtdata)
+```
 
-# Summary of the data set
+
+Summary of the data set
+```{r}
 blogs.size <- file.info("final/en_US/en_US.blogs.txt")$size / 1024 ^ 2
 news.size <- file.info("final/en_US/en_US.news.txt")$size / 1024 ^ 2
 twitter.size <- file.info("final/en_US/en_US.twitter.txt")$size / 1024 ^ 2
@@ -113,12 +118,12 @@ resume <- data.table(
 kable(resume)
 
 # Freeing space
-#rm(txtdatatmp, txtdatatmp2, txtdatatmp3)
+rm(txtdatatmp, txtdatatmp2, txtdatatmp3)
 ```
 
 I'm going to use the tm package.
+Cleaning the data from stopwords, stemming, removing whitespaces 
 ```{r cleaning and stemming the data, cache = TRUE}
-# Cleaning the data from stopwords, stemming, removing whitespaces 
 corpora <- VCorpus(VectorSource(paste(unlist(txtdata), collapse =" ")))
 corpora <- tm_map(corpora, removeNumbers)
 corpora <- tm_map(corpora, removePunctuation)
@@ -131,13 +136,60 @@ dtm <- DocumentTermMatrix(corpora)
 dtm.data <- as.matrix(dtm)
 ```
 
+# TASK 2: EXPLORATORY DATA ANALYSIS
+Zipf's law is an empirical law formulated using mathematical statistics that refers to the fact that many types of data studied in the physical and social sciences can be approximated with a Zipfian distribution, one of a family of related discrete power law probability distributions. 
+We can see from the plot that the frequency is similar to expected.
+```{r Zipf law, cache = TRUE}
+Zipf_plot(dtm)
+```
 
+Most frequent words
+```{r}
+FreqMat <- data.frame(ST = rownames(t(dtm.data)), 
+                       Freq = rowSums(t(dtm.data)), 
+                       row.names = NULL)
+FreqMat <- FreqMat[order(FreqMat$Freq, decreasing=TRUE),]
+ranking<- FreqMat[1:20,]
+ranking$ST <- factor(ranking$ST, levels=ranking$ST)
+fig <- ggplot(ranking, aes(x=as.vector(ranking$ST), y=ranking$Freq)) + geom_bar(stat="identity")
+fig <- fig + aes(ranking$ST)
+fig <- fig + xlab("Word in Corpus")
+fig <- fig + ylab("Word Count")
+fig <- fig + theme_economist()
+print(fig)
+```
 
-# PROFANITY FILTERING 
-*Removing profanity and other words you do not want to predict.*
+# TASK 3: TOKENIZATION 
+*Identifying appropriate tokens such as words, punctuation, and numbers. Writing a function that takes a file as input and returns a tokenized version of it.*
+```{r}
+options(mc.cores=1)
+getFreq <- function(tdm) {
+     freq <- sort(rowSums(as.matrix(tdm)), decreasing = TRUE)
+     return(data.frame(word = names(freq), freq = freq))
+ }
+ bigram <- function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
+ trigram <- function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
+ quadgram <- function(x) NGramTokenizer(x, Weka_control(min = 4, max = 4))
+ makePlot <- function(data, label) {
+     ggplot(data[1:30,], aes(reorder(word, -freq), freq)) +
+         labs(x = label, y = "Frequency") +
+         theme(axis.text.x = element_text(angle = 60, size = 12, hjust = 1)) +
+         geom_bar(stat = "identity", fill = I("grey50"))
+ }
+ 
+freq1 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora), 0.9999))
+freq2 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = bigram)), 0.9999))
+freq3 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = trigram)), 0.9999))
+freq4 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = quadgram)), 0.9999))
+makePlot(freq1, "30 Most Common Unigrams")
+makePlot(freq2, "30 Most Common Bigrams")
+makePlot(freq3, "30 Most Common Trigrams") 
+makePlot(freq4, "30 Most Common Quadgrams") 
+```
+
 
 ***
-# Appendix. Environment used
+# APPENDIX. ENVIRONMENT USED
 ```{r sessioninfo} 
 sessionInfo()
 ```
