@@ -16,8 +16,9 @@ output:
       after_body: DSC.Footer.html
 ---
 
-# TASK 1: GETTING AND CLEANING THE DATA
+# GETTING AND CLEANING THE DATA
 *INTRODUCTION*
+
 This report is part of the John's Hopkins Data Science Course Spacialization. The assignment requires to analyse several files with common txets in order to model the usual pattern of texts and develop an algorithm in order to suggest the following word to the user as Swiftjey's software performs.
 
 ```{r setup, include=FALSE}
@@ -147,7 +148,7 @@ dtm.data <- as.matrix(dtm)
 inspect(dtm)
 ```
 
-# TASK 2: EXPLORATORY DATA ANALYSIS
+# EXPLORATORY DATA ANALYSIS
 Zipf's law is an empirical law formulated using mathematical statistics that refers to the fact that many types of data studied in the physical and social sciences can be approximated with a Zipfian distribution, one of a family of related discrete power law probability distributions. 
 We can see from the plot that the frequency is similar to expected.
 ```{r Zipf law, cache = TRUE}
@@ -178,7 +179,7 @@ wordcloud(words = FreqMat$ST, freq = FreqMat$Freq, min.freq = 1,
           colors=brewer.pal(8, "Dark2"))
 ```
 
-Topic models
+Topics model
 ```{r searching topics}
 lda <- LDA(dtm, k = 8)
 term <- terms(lda,6)
@@ -189,7 +190,7 @@ kable(term)
 
 
 
-# TASK 3: TOKENIZATION 
+# TOKENIZATION 
 *Identifying appropriate tokens such as words, punctuation, and numbers. Writing a function that takes a file as input and returns a tokenized version of it.*
 ```{r tokenizer functions}
 getFreq <- function(tdm) {
@@ -201,10 +202,10 @@ getFreq <- function(tdm) {
  quadgram <- function(x) NGramTokenizer(x, Weka_control(min = 4, max = 4))
  makePlot <- function(data) {
      ggplot(data[1:30,], aes(reorder(word, -freq), freq)) +
-         labs(y = "Frequency") +
+         labs(x="", y = "Frequency") +
          theme_economist() +
          coord_flip()+
-         #theme(axis.text.x = element_text(angle = 60, size = 12, hjust = 1)) +
+         theme(axis.text.x = element_text(size = 6, hjust = 1)) +
          geom_bar(stat = "identity", fill = I("grey50"))
  }
 ```
@@ -226,6 +227,7 @@ wordcloud(words = freq3$word, freq = freq3$freq, min.freq = 1,
           max.words=200, random.order=FALSE, rot.per=0.35, 
           colors=brewer.pal(8, "Dark2"))
 ```
+
 *Quad-gram*
 ```{r quadgram}
 freq4 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = quadgram)), 0.9999))
@@ -236,9 +238,11 @@ wordcloud(words = freq4$word, freq = freq4$freq, min.freq = 1,
 ```
 
 # NEXT STEPS
-Create a model
+This is the initial exploratory data analysis. The processing time is important because the data -although is not very big- the combinations for igrams, or trigrams make the CPU heavy. Is is important to select the best model and efficient functions for the final model of the capstone.
+The initial idea is to use the bigram and trigram inorder to predict the following word.
 
 ***
+
 # APPENDIX. ENVIRONMENT USED
 ```{r sessioninfo} 
 sessionInfo()
