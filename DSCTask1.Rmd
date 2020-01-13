@@ -45,6 +45,10 @@ require(GGally) || install.packages("GGally")
 require(tm) || install.packages("tm")
 require(SnowballC) || install.packages("SnowballC")
 require(RWeka) || install.packages("RWeka")
+require(wordcloud) || install.packages("wordcloud")
+require(RColorBrewer) || install.packages("RColorBrewer")
+require(topicmodels) || install.packages("topicmodels")
+require(lda) || install.packages("lda")
 
 library(readr)
 library(stringr)
@@ -70,6 +74,10 @@ library(GGally)
 library(tm)
 library(SnowballC)
 library(RWeka)
+library(wordcloud)
+library(RColorBrewer)
+library(topicmodels)
+library(lda)
 ```
 
 Source of the data: [Content archived from heliohost.org on September 30, 2016 and retrieved via Wayback Machine on April 24, 2017.](
@@ -99,14 +107,13 @@ names(txtdata.all) <- c("phrases")
 
 # I'm selecting a sample of the phrases available
 # txtdata <- txtdata.all
-txtdata <- sample_n(txtdata.all,100000)
+txtdata <- sample_n(txtdata.all,1000)
 names(txtdata) <- c("phrases")
 attach(txtdata)
 ```
 
-
-Summary of the data set
-```{r}
+Summary of the data sets:
+```{r summary}
 blogs.size <- file.info("final/en_US/en_US.blogs.txt")$size / 1024 ^ 2
 news.size <- file.info("final/en_US/en_US.news.txt")$size / 1024 ^ 2
 twitter.size <- file.info("final/en_US/en_US.twitter.txt")$size / 1024 ^ 2
@@ -114,10 +121,8 @@ resume <- data.table(
   source=c("blogs", "news", "twitter"),
   size.MB = as.character(c(round(blogs.size,digits=1), round(news.size,digits=1), round(twitter.size,digits=1))),
   num.lines = c(length(txtdatatmp$phrases), length(txtdatatmp2$phrases), length(txtdatatmp3$phrases)))
-#  num.words = c(sum(stri_count_words(txtdatatmp)), sum(stri_count_words(txtdatatmp)), sum(stri_count_words(txtdatatmp))))
 kable(resume)
-
-# Freeing space
+# Freeing some space
 rm(txtdatatmp, txtdatatmp2, txtdatatmp3)
 ```
 
@@ -125,15 +130,21 @@ I'm going to use the tm package.
 Cleaning the data from stopwords, stemming, removing whitespaces 
 ```{r cleaning and stemming the data, cache = TRUE}
 corpora <- VCorpus(VectorSource(paste(unlist(txtdata), collapse =" ")))
+removeURL <- function(x) gsub("http[[:alnum:][:punct:]]*", "", x) 
+corpora <- tm_map(corpora, content_transformer(removeURL))
 corpora <- tm_map(corpora, removeNumbers)
 corpora <- tm_map(corpora, removePunctuation)
 corpora <- tm_map(corpora, content_transformer(tolower))
 corpora <- tm_map(corpora, removeWords, stopwords("en"))
 corpora <- tm_map(corpora, stripWhitespace)
 corpora <- tm_map(corpora, stemDocument, language="en")
+```
 
+Creating the term-document matrix and inspecting it
+```{r termmatrix}
 dtm <- DocumentTermMatrix(corpora) 
 dtm.data <- as.matrix(dtm)
+inspect(dtm)
 ```
 
 # TASK 2: EXPLORATORY DATA ANALYSIS
@@ -156,13 +167,31 @@ fig <- fig + aes(ranking$ST)
 fig <- fig + xlab("Word in Corpus")
 fig <- fig + ylab("Word Count")
 fig <- fig + theme_economist()
+fig <- fig + coord_flip()
 print(fig)
 ```
 
+Word cloud
+```{r wordcloud}
+wordcloud(words = FreqMat$ST, freq = FreqMat$Freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+```
+
+Topic models
+```{r searching topics}
+lda <- LDA(dtm, k = 8)
+term <- terms(lda,6)
+kable(term)
+```
+
+
+
+
+
 # TASK 3: TOKENIZATION 
 *Identifying appropriate tokens such as words, punctuation, and numbers. Writing a function that takes a file as input and returns a tokenized version of it.*
-```{r}
-options(mc.cores=1)
+```{r tokenizer functions}
 getFreq <- function(tdm) {
      freq <- sort(rowSums(as.matrix(tdm)), decreasing = TRUE)
      return(data.frame(word = names(freq), freq = freq))
@@ -170,23 +199,44 @@ getFreq <- function(tdm) {
  bigram <- function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
  trigram <- function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
  quadgram <- function(x) NGramTokenizer(x, Weka_control(min = 4, max = 4))
- makePlot <- function(data, label) {
+ makePlot <- function(data) {
      ggplot(data[1:30,], aes(reorder(word, -freq), freq)) +
-         labs(x = label, y = "Frequency") +
-         theme(axis.text.x = element_text(angle = 60, size = 12, hjust = 1)) +
+         labs(y = "Frequency") +
+         theme_economist() +
+         coord_flip()+
+         #theme(axis.text.x = element_text(angle = 60, size = 12, hjust = 1)) +
          geom_bar(stat = "identity", fill = I("grey50"))
  }
- 
-freq1 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora), 0.9999))
-freq2 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = bigram)), 0.9999))
-freq3 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = trigram)), 0.9999))
-freq4 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = quadgram)), 0.9999))
-makePlot(freq1, "30 Most Common Unigrams")
-makePlot(freq2, "30 Most Common Bigrams")
-makePlot(freq3, "30 Most Common Trigrams") 
-makePlot(freq4, "30 Most Common Quadgrams") 
 ```
 
+*Bi-gram*
+```{r bigram}
+freq2 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = bigram)), 0.9999))
+makePlot(freq2)
+wordcloud(words = freq2$word, freq = freq2$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+```
+
+*Tri-gram*
+```{r trigram}
+freq3 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = trigram)), 0.9999))
+makePlot(freq3) 
+wordcloud(words = freq3$word, freq = freq3$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+```
+*Quad-gram*
+```{r quadgram}
+freq4 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = quadgram)), 0.9999))
+makePlot(freq4) 
+wordcloud(words = freq4$word, freq = freq4$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+```
+
+# NEXT STEPS
+Create a model
 
 ***
 # APPENDIX. ENVIRONMENT USED
