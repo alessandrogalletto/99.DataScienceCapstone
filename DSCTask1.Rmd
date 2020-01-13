@@ -1,5 +1,5 @@
 ---
-title: "Data Science Capstone. Milestone Report"
+title: "Data Science Capstone. Milestone Report."
 author: "Alessandro Galletto"
 date: "7/1/2020"
 printdate: "`r Sys.Date()`"
@@ -190,7 +190,7 @@ kable(term)
 
 
 
-# TOKENIZATION 
+# MODELING 
 *Identifying appropriate tokens such as words, punctuation, and numbers. Writing a function that takes a file as input and returns a tokenized version of it.*
 ```{r tokenizer functions}
 getFreq <- function(tdm) {
