@@ -108,7 +108,7 @@ names(txtdata.all) <- c("phrases")
 
 # I'm selecting a sample of the phrases available
 # txtdata <- txtdata.all
-txtdata <- sample_n(txtdata.all,1000)
+txtdata <- sample_n(txtdata.all,100000)
 names(txtdata) <- c("phrases")
 attach(txtdata)
 ```
