@@ -238,8 +238,8 @@ wordcloud(words = freq4$word, freq = freq4$freq, min.freq = 1,
 ```
 
 # NEXT STEPS
-This is the initial exploratory data analysis. The processing time is important because the data -although is not very big- the combinations for igrams, or trigrams make the CPU heavy. Is is important to select the best model and efficient functions for the final model of the capstone.
-The initial idea is to use the bigram and trigram inorder to predict the following word.
+This is the initial exploratory data analysis and modeling of the capstone project. The processing time is important because the data -although is not very big- the combinations for bigrams and trigrams make the CPU heavy. Is is important to select the best model and efficient functions for the final model of the capstone.
+The initial idea for the model is to use the bigram and trigram in order to predict the following word.
 
 ***
 
