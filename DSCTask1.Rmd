@@ -17,41 +17,56 @@ output:
 ---
 
 # GETTING AND CLEANING THE DATA
+
 *INTRODUCTION*
 
 This report is part of the John's Hopkins Data Science Course Spacialization. The assignment requires to analyse several files with common txets in order to model the usual pattern of texts and develop an algorithm in order to suggest the following word to the user as Swiftjey's software performs.
 
+> library (odbc)
+> my_connection <- dbConnect(drv = odbc::odbc(),
++                            Driver = "SQL Driver",
++                            server = "azuredatabase.azure.com,port",
++                            database = "databasename",
++                            uid = "user",
++                            pwd = "password")
+
 ```{r setup, include=FALSE}
+if (!require(knitr)) install.packages("knitr")
+library(knitr)
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-require(readr) || install.packages("readr")
-require(stringr) || install.packages("stringr")
-require(dplyr) || install.packages("dplyr")
-require(ggplot2) || install.packages("ggplot2")
-require(ggcorrplot) || install.packages("ggcorrplot")
-require(reshape) || install.packages("reshape")
-require(reshape2) || install.packages("reshape2")
-require(data.table) || install.packages("data.table")
-require(R.utils) || install.packages("R.utils")
-require(ggthemes) || install.packages("ggthemes")
-require(rlist) || install.packages("rlist")
-require(caret) || install.packages("caret")
-require(rpart) || install.packages("rpart")
-require(rpart.plot) || install.packages("rpart.plot")
-require(rattle) || install.packages("rattle")
-require(randomForest) || install.packages("randomForest")
-require(knitr) || install.packages("knitr")
-require(plotly) || install.packages("plotly")
-require(factoextra) || install.packages("factoextra")
-require(GGally) || install.packages("GGally")
-require(tm) || install.packages("tm")
-require(SnowballC) || install.packages("SnowballC")
-require(RWeka) || install.packages("RWeka")
-require(wordcloud) || install.packages("wordcloud")
-require(RColorBrewer) || install.packages("RColorBrewer")
-require(topicmodels) || install.packages("topicmodels")
-require(lda) || install.packages("lda")
+if (!require(readr)) install.packages("readr")
+if (!require(rmarkdown)) install.packages("rmarkdown")
+if (!require(prettydoc)) install.packages("prettydoc")
+if (!require(stringr)) install.packages("stringr")
+if (!require(dplyr)) install.packages("dplyr")
+if (!require(ggplot2)) install.packages("ggplot2")
+if (!require(ggcorrplot)) install.packages("ggcorrplot")
+if (!require(reshape)) install.packages("reshape")
+if (!require(reshape2)) install.packages("reshape2")
+if (!require(data.table)) install.packages("data.table")
+if (!require(R.utils)) install.packages("R.utils")
+if (!require(ggthemes)) install.packages("ggthemes")
+if (!require(rlist)) install.packages("rlist")
+if (!require(caret)) install.packages("caret")
+if (!require(rpart)) install.packages("rpart")
+if (!require(rpart.plot)) install.packages("rpart.plot")
+if (!require(rattle)) install.packages("rattle")
+if (!require(randomForest)) install.packages("randomForest")
+if (!require(plotly)) install.packages("plotly")
+if (!require(factoextra)) install.packages("factoextra")
+if (!require(GGally)) install.packages("GGally")
+if (!require(tm)) install.packages("tm")
+if (!require(SnowballC)) install.packages("SnowballC")
+if (!require(rJava)) install.packages("rJava")
+if (!require(RWeka)) install.packages("RWeka")
+if (!require(wordcloud)) install.packages("wordcloud")
+if (!require(RColorBrewer)) install.packages("RColorBrewer")
+if (!require(topicmodels)) install.packages("topicmodels")
+if (!require(lda)) install.packages("lda")
 
 library(readr)
+library(rmarkdown)
+library(prettydoc)
 library(stringr)
 library(dplyr)
 library(ggplot2)
@@ -67,13 +82,13 @@ library(rpart)
 library(rpart.plot)
 library(rattle)
 library(randomForest)
-library(knitr)
 library(DT)
 library(plotly)
 library(factoextra)
 library(GGally)
 library(tm)
 library(SnowballC)
+library(rJava)
 library(RWeka)
 library(wordcloud)
 library(RColorBrewer)
@@ -81,20 +96,21 @@ library(topicmodels)
 library(lda)
 ```
 
-Source of the data: [Content archived from heliohost.org on September 30, 2016 and retrieved via Wayback Machine on April 24, 2017.](
-https://web-beta.archive.org/web/20160930083655/http://www.corpora.heliohost.org/aboutcorpus.html)
+Source of the data: [Content archived from heliohost.org on September 30, 2016 and retrieved via Wayback Machine on April 24, 2017.](https://web-beta.archive.org/web/20160930083655/http://www.corpora.heliohost.org/aboutcorpus.html)
 
 The data is collected by a web archiver that allows us to have the text published. This zip contains several languages: 1) German, 2) English - United States, 3) Finnish and 4) Russian but I'm going to process only the English language. Anyway, all that is deveolpped in this assigment can be applied to other languages.
 
 Reading of the english files:
+
 ```{r loadingfiles, cache = TRUE}
 # download and unzip of the files
 fileName <- "Coursera-SwiftKey.zip"
-if (file.exists(fileName)) file.remove(fileName)
+# if (file.exists(fileName)) file.remove(fileName)
 unlink("Final", recursive = TRUE)
 url.file <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
-download.file(url.file, destfile="Coursera-SwiftKey.zip")
-unzip(fileName)
+# fails download.file(url.file, destfile="Coursera-SwiftKey.zip")
+# unzip(fileName)
+
 # Using read_lines because readr is the most efficient r package in reading files
 txtdatatmp <- tbl_df(read_lines(file="./final/en_US/en_US.blogs.txt"))
 txtdatatmp2 <- tbl_df(read_lines(file="./final/en_US/en_US.news.txt"))
@@ -114,6 +130,7 @@ attach(txtdata)
 ```
 
 Summary of the data sets:
+
 ```{r summary}
 blogs.size <- file.info("final/en_US/en_US.blogs.txt")$size / 1024 ^ 2
 news.size <- file.info("final/en_US/en_US.news.txt")$size / 1024 ^ 2
@@ -127,8 +144,8 @@ kable(resume)
 rm(txtdatatmp, txtdatatmp2, txtdatatmp3)
 ```
 
-I'm going to use the tm package.
-Cleaning the data from stopwords, stemming, removing whitespaces 
+I'm going to use the tm package. Cleaning the data from stopwords, stemming, removing whitespaces
+
 ```{r cleaning and stemming the data, cache = TRUE}
 corpora <- VCorpus(VectorSource(paste(unlist(txtdata), collapse =" ")))
 removeURL <- function(x) gsub("http[[:alnum:][:punct:]]*", "", x) 
@@ -142,6 +159,7 @@ corpora <- tm_map(corpora, stemDocument, language="en")
 ```
 
 Creating the term-document matrix and inspecting it
+
 ```{r termmatrix}
 dtm <- DocumentTermMatrix(corpora) 
 dtm.data <- as.matrix(dtm)
@@ -149,13 +167,15 @@ inspect(dtm)
 ```
 
 # EXPLORATORY DATA ANALYSIS
-Zipf's law is an empirical law formulated using mathematical statistics that refers to the fact that many types of data studied in the physical and social sciences can be approximated with a Zipfian distribution, one of a family of related discrete power law probability distributions. 
-We can see from the plot that the frequency is similar to expected.
+
+Zipf's law is an empirical law formulated using mathematical statistics that refers to the fact that many types of data studied in the physical and social sciences can be approximated with a Zipfian distribution, one of a family of related discrete power law probability distributions. We can see from the plot that the frequency is similar to expected.
+
 ```{r Zipf law, cache = TRUE}
 Zipf_plot(dtm)
 ```
 
 Most frequent words
+
 ```{r}
 FreqMat <- data.frame(ST = rownames(t(dtm.data)), 
                        Freq = rowSums(t(dtm.data)), 
@@ -173,6 +193,7 @@ print(fig)
 ```
 
 Word cloud
+
 ```{r wordcloud}
 wordcloud(words = FreqMat$ST, freq = FreqMat$Freq, min.freq = 1,
           max.words=200, random.order=FALSE, rot.per=0.35, 
@@ -180,18 +201,17 @@ wordcloud(words = FreqMat$ST, freq = FreqMat$Freq, min.freq = 1,
 ```
 
 Topics model
+
 ```{r searching topics}
 lda <- LDA(dtm, k = 8)
 term <- terms(lda,6)
 kable(term)
 ```
 
+# MODELING
 
-
-
-
-# MODELING 
 *Identifying appropriate tokens such as words, punctuation, and numbers. Writing a function that takes a file as input and returns a tokenized version of it.*
+
 ```{r tokenizer functions}
 getFreq <- function(tdm) {
      freq <- sort(rowSums(as.matrix(tdm)), decreasing = TRUE)
@@ -211,6 +231,7 @@ getFreq <- function(tdm) {
 ```
 
 *Bi-gram*
+
 ```{r bigram}
 freq2 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = bigram)), 0.9999))
 makePlot(freq2)
@@ -220,6 +241,7 @@ wordcloud(words = freq2$word, freq = freq2$freq, min.freq = 1,
 ```
 
 *Tri-gram*
+
 ```{r trigram}
 freq3 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = trigram)), 0.9999))
 makePlot(freq3) 
@@ -229,6 +251,7 @@ wordcloud(words = freq3$word, freq = freq3$freq, min.freq = 1,
 ```
 
 *Quad-gram*
+
 ```{r quadgram}
 freq4 <- getFreq(removeSparseTerms(TermDocumentMatrix(corpora, control = list(tokenize = quadgram)), 0.9999))
 makePlot(freq4) 
@@ -238,12 +261,13 @@ wordcloud(words = freq4$word, freq = freq4$freq, min.freq = 1,
 ```
 
 # NEXT STEPS
-This is the initial exploratory data analysis and modeling of the capstone project. The processing time is important because the data -although is not very big- the combinations for bigrams and trigrams make the CPU heavy. Is is important to select the best model and efficient functions for the final model of the capstone.
-The initial idea for the model is to use the bigram and trigram in order to predict the following word.
 
-***
+This is the initial exploratory data analysis and modeling of the capstone project. The processing time is important because the data -although is not very big- the combinations for bigrams and trigrams make the CPU heavy. Is is important to select the best model and efficient functions for the final model of the capstone. The initial idea for the model is to use the bigram and trigram in order to predict the following word.
+
+------------------------------------------------------------------------
 
 # APPENDIX. ENVIRONMENT USED
-```{r sessioninfo} 
+
+```{r sessioninfo}
 sessionInfo()
 ```
